@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Skrub — Artikel generator</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    background: #f7f6f2;
+    color: #1a1a18;
+    padding: 16px;
+    font-size: 13px;
+  }
+  h1 { font-size: 15px; font-weight: 600; margin-bottom: 14px; }
+  .section {
+    background: #fff;
+    border: 1px solid #e2e0d8;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 10px;
+  }
+  .section-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: #999;
+    margin-bottom: 8px;
+  }
+  label { font-size: 11px; color: #888; display: block; margin-bottom: 3px; margin-top: 8px; }
+  label:first-of-type { margin-top: 0; }
+  input, textarea, select {
+    width: 100%;
+    font-family: inherit;
+    font-size: 13px;
+    color: #1a1a18;
+    background: #faf9f7;
+    border: 1px solid #e2e0d8;
+    border-radius: 5px;
+    padding: 7px 9px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  input:focus, textarea:focus, select:focus { border-color: #999; background: #fff; }
+  textarea { resize: vertical; line-height: 1.55; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  button {
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 6px;
+    padding: 9px 14px;
+    transition: all 0.15s;
+    border: 1px solid;
+    width: 100%;
+  }
+  .btn-dark { background: #1a1a18; color: #fff; border-color: #1a1a18; margin-top: 4px; }
+  .btn-dark:hover { background: #333; }
+  .btn-dark:disabled { background: #bbb; border-color: #bbb; cursor: not-allowed; }
+  .btn-green { background: #1d6f4a; color: #fff; border-color: #1d6f4a; }
+  .btn-green:hover { background: #175c3d; }
+  .btn-green:disabled { background: #bbb; border-color: #bbb; cursor: not-allowed; }
+  .btn-light { background: transparent; color: #555; border-color: #d8d6ce; }
+  .btn-light:hover { background: #f5f4f0; }
+  .btn-row { display: grid; grid-template-columns: 1fr 2fr; gap: 8px; margin-top: 10px; }
+  .preview-box {
+    background: #faf9f7;
+    border: 1px solid #e2e0d8;
+    border-radius: 5px;
+    padding: 10px;
+    font-size: 13px;
+    line-height: 1.65;
+    white-space: pre-wrap;
+    color: #1a1a18;
+    min-height: 80px;
+    max-height: 280px;
+    overflow-y: auto;
+  }
+  .status { font-size: 12px; text-align: center; padding: 5px 0 0; color: #888; }
+  .status.ok { color: #1d6f4a; font-weight: 600; }
+  .status.err { color: #c0392b; }
+  .spinner {
+    display: inline-block;
+    width: 11px; height: 11px;
+    border: 2px solid #ccc;
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    vertical-align: -1px;
+    margin-right: 5px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #setup-screen {
+    position: fixed;
+    inset: 0;
+    background: #f7f6f2;
+    padding: 24px 16px;
+    z-index: 100;
+    overflow-y: auto;
+  }
+  #setup-screen h2 { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
+  #setup-screen p { font-size: 13px; color: #666; margin-bottom: 16px; line-height: 1.5; }
+  #setup-screen .note {
+    font-size: 11px;
+    color: #999;
+    background: #fff;
+    border: 1px solid #e2e0d8;
+    border-radius: 6px;
+    padding: 8px 10px;
+    margin-top: 8px;
+    line-height: 1.6;
+  }
+  #main-screen { display: none; }
+  .settings-link { font-size: 11px; color: #999; text-align: right; margin-bottom: 8px; cursor: pointer; text-decoration: underline; }
+</style>
+</head>
+<body>
+
+<div id="setup-screen">
+  <h2>Skrub — Eerste keer instellen</h2>
+  <p>Vul je API keys in. Ze worden lokaal opgeslagen in je browser — je hoeft dit maar één keer te doen.</p>
+
+  <div class="section">
+    <div class="section-label">Anthropic API key</div>
+    <input type="password" id="setup-anthropic" placeholder="sk-ant-..." autocomplete="off" />
+    <div class="note">Vind je op console.anthropic.com → API Keys</div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">Gorgias API key</div>
+    <input type="password" id="setup-gorgias-key" placeholder="Je Gorgias API key" autocomplete="off" />
+    <div class="note">Vind je op skrub.gorgias.com/app/settings/api</div>
+  </div>
+
+  <button class="btn-dark" onclick="saveSetup()">Opslaan en starten</button>
+  <div class="status err" id="setup-status" style="margin-top:8px;"></div>
+</div>
+
+<div id="main-screen">
+  <div class="settings-link" onclick="openSetup()">⚙ API instellingen</div>
+  <h1>Ticket → Help Center artikel</h1>
+
+  <div class="section">
+    <div class="section-label">Klantvraag</div>
+    <textarea id="ticket" rows="5" placeholder="Plak hier de klantvraag uit het ticket..."></textarea>
+  </div>
+
+  <div class="section">
+    <div class="section-label">Correct antwoord</div>
+    <textarea id="answer" rows="3" placeholder="Wat is het juiste antwoord? Kort en informeel."></textarea>
+  </div>
+
+  <div class="section">
+    <div class="section-label">Context</div>
+    <div class="grid-2">
+      <div>
+        <label>Product</label>
+        <input type="text" id="product" placeholder="bijv. The Big One" />
+      </div>
+      <div>
+        <label>Type artikel</label>
+        <select id="art-type">
+          <option value="probleemoplossing">Probleemoplossing</option>
+          <option value="faq">Veelgestelde vraag</option>
+          <option value="handleiding">Handleiding</option>
+          <option value="productinfo">Productinformatie</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <button class="btn-dark" id="btn-gen" onclick="generate()">Genereer artikel</button>
+
+  <div class="section" id="preview-section" style="display:none; margin-top:10px;">
+    <div class="section-label">Preview</div>
+    <div class="preview-box" id="preview"></div>
+    <label style="margin-top:10px;">Artikeltitel</label>
+    <input type="text" id="art-title" />
+    <div class="btn-row">
+      <button class="btn-light" onclick="generate()">Opnieuw</button>
+      <button class="btn-green" id="btn-pub" onclick="publish()">Publiceer in Gorgias →</button>
+    </div>
+    <div class="status" id="pub-status"></div>
+  </div>
+</div>
+
+<script>
+  const GORGIAS_DOMAIN = 'skrub.gorgias.com';
+  const GORGIAS_EMAIL = 'hey@skrub.nl';
+  let generatedBody = '';
+
+  function init() {
+    const a = localStorage.getItem('skrub_anthropic_key');
+    const g = localStorage.getItem('skrub_gorgias_key');
+    if (a && g) {
+      document.getElementById('setup-screen').style.display = 'none';
+      document.getElementById('main-screen').style.display = 'block';
+    }
+  }
+
+  function saveSetup() {
+    const a = document.getElementById('setup-anthropic').value.trim();
+    const g = document.getElementById('setup-gorgias-key').value.trim();
+    if (!a || !g) { document.getElementById('setup-status').textContent = 'Vul beide API keys in.'; return; }
+    localStorage.setItem('skrub_anthropic_key', a);
+    localStorage.setItem('skrub_gorgias_key', g);
+    document.getElementById('setup-screen').style.display = 'none';
+    document.getElementById('main-screen').style.display = 'block';
+  }
+
+  function openSetup() {
+    document.getElementById('setup-anthropic').value = localStorage.getItem('skrub_anthropic_key') || '';
+    document.getElementById('setup-gorgias-key').value = localStorage.getItem('skrub_gorgias_key') || '';
+    document.getElementById('setup-screen').style.display = 'block';
+  }
+
+  async function generate() {
+    const ticket = document.getElementById('ticket').value.trim();
+    const answer = document.getElementById('answer').value.trim();
+    const product = document.getElementById('product').value.trim();
+    const type = document.getElementById('art-type').value;
+    const btn = document.getElementById('btn-gen');
+    const ANTHROPIC_KEY = localStorage.getItem('skrub_anthropic_key');
+
+    if (!ticket || !answer) { alert('Vul de klantvraag en het antwoord in.'); return; }
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Bezig...';
+    document.getElementById('preview-section').style.display = 'none';
+    document.getElementById('pub-status').textContent = '';
+    document.getElementById('pub-status').className = 'status';
+
+    const prompt = `Je krijgt een klantvraag en het correcte antwoord. Schrijf daar een beknopt Help Center artikel (type: ${type}) van in informeel Nederlands. Geen "u/uw". Geen AI-klinkende intro's. Schrijf zoals een behulpzame collega. Verwerk de klantvraag niet letterlijk — schrijf het als een algemeen probleem dat meer klanten kunnen hebben.
+
+${product ? 'Product: ' + product : ''}
+
+Klantvraag:
+${ticket}
+
+Correct antwoord:
+${answer}
+
+Geef op de eerste regel: TITEL: [een duidelijke, zoekbare titel]
+Dan een lege regel.
+Dan de artikelinhoud.`;
+
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': ANTHROPIC_KEY,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-5',
+          max_tokens: 1000,
+          system: 'Je bent Help Center schrijver voor Skrub, een Nederlands reinigingsapparatuur merk. Schrijf altijd informeel, zonder "u/uw", direct en to the point. Geen opsommingen tenzij nodig. Geen AI-jargon.',
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error?.message || res.status);
+
+      const raw = data.content.map(b => b.text || '').join('');
+      const titleMatch = raw.match(/^TITEL:\s*(.+)/m);
+      const title = titleMatch ? titleMatch[1].trim() : (product ? product + ' — probleem' : 'Nieuw artikel');
+      const body = raw.replace(/^TITEL:\s*.+\n?/m, '').trim();
+
+      generatedBody = body;
+      document.getElementById('art-title').value = title;
+      document.getElementById('preview').textContent = body;
+      document.getElementById('preview-section').style.display = 'block';
+    } catch (e) {
+      alert('Genereren mislukt: ' + e.message);
+    }
+
+    btn.disabled = false;
+    btn.innerHTML = 'Genereer artikel';
+  }
+
+  async function publish() {
+    const title = document.getElementById('art-title').value.trim();
+    const statusEl = document.getElementById('pub-status');
+    const btn = document.getElementById('btn-pub');
+    const GORGIAS_KEY = localStorage.getItem('skrub_gorgias_key');
+
+    if (!title || !generatedBody) { statusEl.textContent = 'Genereer eerst een artikel.'; statusEl.className = 'status err'; return; }
+
+    btn.disabled = true;
+    btn.textContent = 'Publiceren...';
+
+    const bodyHtml = generatedBody.split('\n').filter(l => l.trim()).map(l => `<p>${l}</p>`).join('');
+
+    try {
+      const res = await fetch(`https://${GORGIAS_DOMAIN}/api/articles`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Basic ' + btoa(`${GORGIAS_EMAIL}:${GORGIAS_KEY}`)
+        },
+        body: JSON.stringify({ title, body_html: bodyHtml, published: false })
+      });
+
+      if (res.ok) {
+        const art = await res.json();
+        statusEl.textContent = '✓ Concept aangemaakt in Gorgias (ID: ' + art.id + ')';
+        statusEl.className = 'status ok';
+      } else {
+        const err = await res.json().catch(() => ({}));
+        statusEl.textContent = 'Fout ' + res.status + ': ' + (err?.error?.message || 'onbekend');
+        statusEl.className = 'status err';
+      }
+    } catch (e) {
+      statusEl.textContent = 'Netwerkfout: ' + e.message;
+      statusEl.className = 'status err';
+    }
+
+    btn.disabled = false;
+    btn.textContent = 'Publiceer in Gorgias →';
+  }
+
+  init();
+</script>
+</body>
+</html>
