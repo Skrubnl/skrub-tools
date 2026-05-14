@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Skrub — Article Generator</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Helvetica Neue', Arial, sans-serif; background: #f7f6f2; color: #1a1a18; padding: 24px 20px; font-size: 14px; max-width: 960px; margin: 0 auto; }
+  .logo { font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #aaa; margin-bottom: 20px; }
+  h1 { font-size: 20px; font-weight: 600; margin-bottom: 4px; }
+  .subtitle { font-size: 13px; color: #999; margin-bottom: 16px; }
+  .section { background: #fff; border: 1px solid #e2e0d8; border-radius: 10px; padding: 16px; margin-bottom: 12px; }
+  .section-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #bbb; margin-bottom: 10px; }
+  label { font-size: 12px; color: #888; display: block; margin-bottom: 4px; margin-top: 12px; }
+  label:first-of-type { margin-top: 0; }
+  input, textarea, select { width: 100%; font-family: inherit; font-size: 14px; color: #1a1a18; background: #faf9f7; border: 1px solid #e2e0d8; border-radius: 6px; padding: 9px 11px; outline: none; transition: border-color 0.15s; }
+  input:focus, textarea:focus, select:focus { border-color: #888; background: #fff; }
+  textarea { resize: vertical; line-height: 1.6; }
+  button { font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; border-radius: 7px; padding: 11px 16px; transition: all 0.15s; border: 1px solid; width: 100%; }
+  .btn-dark { background: #1a1a18; color: #fff; border-color: #1a1a18; }
+  .btn-dark:hover { background: #333; }
+  .btn-dark:disabled { background: #ccc; border-color: #ccc; cursor: not-allowed; }
+  .btn-light { background: transparent; color: #555; border-color: #d8d6ce; }
+  .btn-light:hover { background: #f0efe9; }
+  .btn-copy { background: #f0efe9; color: #1a1a18; border-color: #d8d6ce; }
+  .btn-copy:hover { background: #e5e4de; }
+  .btn-tab { background: transparent; color: #888; border-color: #e2e0d8; font-size: 13px; padding: 7px 16px; width: auto; border-radius: 6px; }
+  .btn-tab.active { background: #1a1a18; color: #fff; border-color: #1a1a18; }
+  .btn-tab:hover:not(.active) { background: #f0efe9; }
+  .btn-lang { background: transparent; color: #888; border-color: #e2e0d8; font-size: 12px; padding: 5px 10px; width: auto; border-radius: 5px; }
+  .btn-lang.active { background: #1a1a18; color: #fff; border-color: #1a1a18; }
+  .btn-lang:hover:not(.active) { background: #f0efe9; }
+  .top-bar { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
+  .settings-btn { font-size: 11px; color: #bbb; cursor: pointer; text-decoration: underline; background: none; border: none; width: auto; padding: 0; font-weight: 400; }
+  .settings-btn:hover { color: #555; }
+  .tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+  .hint { font-size: 11px; color: #bbb; margin-top: 4px; }
+  .output-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+  .output-col { background: #fff; border: 1px solid #e2e0d8; border-radius: 10px; padding: 16px; }
+  .col-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .col-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #bbb; }
+  .lang-switcher { display: flex; gap: 5px; }
+  .preview-box { background: #faf9f7; border: 1px solid #e2e0d8; border-radius: 6px; padding: 14px; font-size: 13px; line-height: 1.8; color: #1a1a18; min-height: 200px; max-height: 500px; overflow-y: auto; font-family: Georgia, serif; }
+  .preview-box.loading { color: #bbb; font-family: inherit; font-style: italic; }
+  .preview-box p { margin-bottom: 10px; }
+  .preview-box ol, .preview-box ul { padding-left: 20px; margin-bottom: 10px; }
+  .preview-box li { margin-bottom: 6px; }
+  .preview-box strong { font-weight: 600; }
+  .preview-box a { color: #1a1a18; }
+  .action-row { display: flex; gap: 8px; margin-top: 10px; }
+  .action-row button { flex: 1; }
+  .source-tag { display: inline-block; font-size: 11px; padding: 3px 9px; border-radius: 4px; margin-right: 5px; margin-bottom: 4px; background: #eef6f1; color: #1d6f4a; border: 1px solid #c5e0d2; }
+  .source-tag.pending { background: #f7f6f2; color: #bbb; border-color: #e2e0d8; }
+  .source-tag.failed { background: #fef2f2; color: #c0392b; border-color: #f5c5c5; }
+  .title-input { font-size: 15px; font-weight: 600; margin-bottom: 10px; }
+  .status { font-size: 12px; padding: 4px 0; color: #888; text-align: center; }
+  .status.ok { color: #1d6f4a; font-weight: 600; }
+  .spinner { display: inline-block; width: 12px; height: 12px; border: 2px solid #aaa; border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: -1px; margin-right: 6px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #setup-screen { position: fixed; inset: 0; background: #f7f6f2; padding: 48px 24px; z-index: 100; overflow-y: auto; }
+  #setup-screen .inner { max-width: 440px; margin: 0 auto; }
+  #setup-screen h2 { font-size: 20px; font-weight: 600; margin-bottom: 8px; }
+  #setup-screen p { font-size: 13px; color: #666; margin-bottom: 20px; line-height: 1.6; }
+  #setup-screen .note { font-size: 11px; color: #999; background: #fff; border: 1px solid #e2e0d8; border-radius: 6px; padding: 8px 10px; margin-top: 8px; line-height: 1.6; }
+  #main-screen { display: none; }
+  #results-section { display: none; }
+  .mono { font-family: monospace; font-size: 12px; }
+</style>
+</head>
+<body>
+
+<!-- Setup screen -->
+<div id="setup-screen">
+  <div class="inner">
+    <div class="logo">Skrub</div>
+    <h2>First time setup</h2>
+    <p>Enter your Anthropic API key. It's saved locally in your browser — you only need to do this once.</p>
+    <div class="section">
+      <div class="section-label">Anthropic API key</div>
+      <input type="password" id="setup-anthropic" placeholder="sk-ant-..." autocomplete="off" />
+      <div class="note">Find yours at console.anthropic.com → API Keys</div>
+    </div>
+    <button class="btn-dark" onclick="saveSetup()">Save and continue</button>
+    <div class="status" id="setup-status" style="margin-top:8px;color:#c0392b;"></div>
+  </div>
+</div>
+
+<!-- Main screen -->
+<div id="main-screen">
+  <div class="top-bar">
+    <div>
+      <div class="logo">Skrub</div>
+      <h1>Article Generator</h1>
+      <p class="subtitle">Turn a support ticket into a Help Center article</p>
+    </div>
+    <button class="settings-btn" onclick="openSetup()">⚙ API key</button>
+  </div>
+
+  <div class="tabs">
+    <button class="btn-tab active" id="tab-gen" onclick="switchTab('gen')">Generator</button>
+    <button class="btn-tab" id="tab-prompt" onclick="switchTab('prompt')">Prompt settings</button>
+  </div>
+
+  <!-- Generator panel -->
+  <div id="panel-gen">
+    <div class="section">
+      <div class="section-label">Product (optional)</div>
+      <label>Product page URL</label>
+      <input type="text" id="product-url" placeholder="https://skrub.nl/products/the-big-one" />
+      <p class="hint">The tool pulls live product info from this page to ensure accuracy</p>
+    </div>
+    <div class="section">
+      <div class="section-label">Ticket</div>
+      <label>Customer question</label>
+      <textarea id="ticket" rows="4" placeholder="Paste the customer's message here..."></textarea>
+      <label>Correct answer</label>
+      <textarea id="answer" rows="3" placeholder="What is the right answer? Keep it short and clear."></textarea>
+    </div>
+    <div class="section">
+      <div class="section-label">Article type</div>
+      <select id="art-type">
+        <option value="troubleshooting">Troubleshooting</option>
+        <option value="faq">FAQ</option>
+        <option value="how-to guide">How-to guide</option>
+        <option value="product info">Product info</option>
+      </select>
+    </div>
+    <button class="btn-dark" id="btn-gen" onclick="generate()">Generate article</button>
+
+    <div id="results-section">
+      <div class="section" style="margin-top:12px;">
+        <div class="section-label">Sources</div>
+        <div id="sources-row"></div>
+      </div>
+
+      <div class="output-grid">
+        <!-- Dutch -->
+        <div class="output-col">
+          <div class="col-header">
+            <span class="col-title">Nederlands — for Gorgias</span>
+          </div>
+          <input class="title-input" type="text" id="title-nl" placeholder="Title..." />
+          <div class="preview-box loading" id="preview-nl">Generating...</div>
+          <div class="action-row">
+            <button class="btn-copy" onclick="copyCol('nl')">Copy for Gorgias</button>
+          </div>
+          <div class="status" id="status-nl"></div>
+        </div>
+
+        <!-- English / Filipino -->
+        <div class="output-col">
+          <div class="col-header">
+            <span class="col-title">To verify</span>
+            <div class="lang-switcher">
+              <button class="btn-lang active" id="lang-en" onclick="switchLang('en')">EN</button>
+              <button class="btn-lang" id="lang-fil" onclick="switchLang('fil')">Filipino</button>
+            </div>
+          </div>
+          <input class="title-input" type="text" id="title-en" placeholder="Title..." />
+          <div class="preview-box loading" id="preview-en">Generating...</div>
+          <div class="action-row">
+            <button class="btn-light" id="btn-translate" onclick="translate()" style="display:none;">Translate to Filipino</button>
+          </div>
+          <div class="status" id="status-en"></div>
+        </div>
+      </div>
+
+      <div style="margin-top:12px; display:flex; gap:10px;">
+        <button class="btn-light" onclick="generate()">Regenerate</button>
+        <button class="btn-light" id="btn-steps" onclick="toggleSteps()" style="flex:1;">How to publish in Gorgias ↓</button>
+      </div>
+      <div id="publish-steps" style="display:none; margin-top:10px;" class="section">
+        <div class="section-label">How to publish in Gorgias</div>
+        <ol style="padding-left:18px; line-height:2.2; font-size:13px;">
+          <li>Click <strong>Copy for Gorgias</strong> on the Dutch column above</li>
+          <li>Open <a href="https://skrub.gorgias.com/app/settings/help-center/118253/articles" target="_blank" style="color:#1a1a18; text-decoration:underline;">Gorgias Help Center → Articles</a></li>
+          <li>Click <strong>Create article from scratch</strong></li>
+          <li>Add the <strong>title</strong> and paste the <strong>article text</strong></li>
+          <li>Pick the right <strong>category</strong></li>
+          <li>Check if everything looks good</li>
+          <li>Click <strong>Save &amp; Publish</strong></li>
+        </ol>
+      </div>
+    </div>
+  </div>
+
+  <!-- Prompt settings panel -->
+  <div id="panel-prompt" style="display:none;">
+    <div class="section">
+      <div class="section-label">Brand context</div>
+      <p style="font-size:12px; color:#999; margin-bottom:10px;">Sent to Claude with every generation. Edit if products, tone, or info changes.</p>
+      <textarea class="mono" id="edit-brand" rows="12"></textarea>
+    </div>
+    <div class="section">
+      <div class="section-label">Format instructions</div>
+      <p style="font-size:12px; color:#999; margin-bottom:10px;">Controls how the article is structured and formatted.</p>
+      <textarea class="mono" id="edit-format" rows="10"></textarea>
+    </div>
+    <div style="display:flex; gap:10px;">
+      <button class="btn-dark" onclick="savePrompts()">Save changes</button>
+      <button class="btn-light" onclick="resetPrompts()">Reset to default</button>
+    </div>
+    <div class="status ok" id="prompt-status" style="margin-top:8px;"></div>
+  </div>
+</div>
+
+<script>
+  const DEFAULT_BRAND = `Brand: Skrub (skrub.nl)
+Founded: 2022
+Category: mid-segment household cleaning appliances
+Products: always refer to products by their exact name (e.g. "The Big One", "The Beast", "The Scrubber") — NEVER call them "De Skrub", "the Skrub", or "het apparaat" without using the product name
+Core USPs: no chemicals needed, works on 100+ surfaces, easy to use, sustainable
+Guarantee: 3 years / Return policy: 30 days / Customer service: hey@skrub.nl
+Tone: informal, direct, helpful — no corporate language
+Target audience: women 25-55, households with children or pets`;
+
+  const DEFAULT_FORMAT = `Output format rules — HTML only, no markdown:
+- Use <p> for paragraphs
+- Use <ol><li> for numbered steps (troubleshooting/how-to)
+- Use <ul><li> for bullet sub-items
+- Use <strong> for important words and step labels
+- End with: <p>Heb je nog vragen? Mail ons via hey@skrub.nl.</p> (Dutch) or <p>Still have questions? Email us at hey@skrub.nl.</p> (English/Filipino)
+- No markdown. No asterisks. Pure HTML only.
+- Title on first line as: TITEL: [title] (Dutch) or TITLE: [title] (English)`;
+
+  let htmlNL = '', htmlEN = '', htmlFIL = '';
+  let currentLang = 'en';
+
+  function getBrand() { return localStorage.getItem('skrub_brand') || DEFAULT_BRAND; }
+  function getFormat() { return localStorage.getItem('skrub_format') || DEFAULT_FORMAT; }
+
+  function init() {
+    if (localStorage.getItem('skrub_anthropic_key')) {
+      document.getElementById('setup-screen').style.display = 'none';
+      document.getElementById('main-screen').style.display = 'block';
+    }
+    document.getElementById('edit-brand').value = getBrand();
+    document.getElementById('edit-format').value = getFormat();
+  }
+
+  function saveSetup() {
+    const a = document.getElementById('setup-anthropic').value.trim();
+    if (!a) { document.getElementById('setup-status').textContent = 'Please enter your API key.'; return; }
+    localStorage.setItem('skrub_anthropic_key', a);
+    document.getElementById('setup-screen').style.display = 'none';
+    document.getElementById('main-screen').style.display = 'block';
+  }
+
+  function openSetup() {
+    document.getElementById('setup-anthropic').value = localStorage.getItem('skrub_anthropic_key') || '';
+    document.getElementById('setup-screen').style.display = 'block';
+  }
+
+  function switchTab(tab) {
+    document.getElementById('panel-gen').style.display = tab === 'gen' ? 'block' : 'none';
+    document.getElementById('panel-prompt').style.display = tab === 'prompt' ? 'block' : 'none';
+    document.getElementById('tab-gen').classList.toggle('active', tab === 'gen');
+    document.getElementById('tab-prompt').classList.toggle('active', tab === 'prompt');
+    if (tab === 'prompt') {
+      document.getElementById('edit-brand').value = getBrand();
+      document.getElementById('edit-format').value = getFormat();
+    }
+  }
+
+  function savePrompts() {
+    localStorage.setItem('skrub_brand', document.getElementById('edit-brand').value.trim());
+    localStorage.setItem('skrub_format', document.getElementById('edit-format').value.trim());
+    const s = document.getElementById('prompt-status');
+    s.textContent = '✓ Saved';
+    setTimeout(() => { s.textContent = ''; }, 2000);
+  }
+
+  function resetPrompts() {
+    localStorage.removeItem('skrub_brand');
+    localStorage.removeItem('skrub_format');
+    document.getElementById('edit-brand').value = DEFAULT_BRAND;
+    document.getElementById('edit-format').value = DEFAULT_FORMAT;
+    const s = document.getElementById('prompt-status');
+    s.textContent = '✓ Reset to default';
+    setTimeout(() => { s.textContent = ''; }, 2000);
+  }
+
+  function setSource(id, state) {
+    const el = document.getElementById(id);
+    if (el) el.className = 'source-tag ' + state;
+  }
+
+  async function fetchPage(url) {
+    try {
+      const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
+      const data = await res.json();
+      return data.contents || '';
+    } catch { return ''; }
+  }
+
+  function stripHtml(html, max) {
+    const d = document.createElement('div');
+    d.innerHTML = html;
+    return (d.textContent || d.innerText || '').replace(/\s+/g, ' ').trim().slice(0, max);
+  }
+
+  async function callClaude(userPrompt, systemPrompt) {
+    const key = localStorage.getItem('skrub_anthropic_key');
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': key,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-5',
+        max_tokens: 1500,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userPrompt }]
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data?.error?.message || res.status);
+    return data.content.map(b => b.text || '').join('');
+  }
+
+  function parseAndRender(raw, titleInputId, previewId) {
+    const lines = raw.trim().split('\n');
+    const titleLine = lines.find(l => /^(TITEL|TITLE):/i.test(l));
+    const title = titleLine ? titleLine.replace(/^(TITEL|TITLE):\s*/i, '').trim() : '';
+    const body = lines.filter(l => !/^(TITEL|TITLE):/i.test(l)).join('\n').trim();
+    document.getElementById(titleInputId).value = title;
+    const box = document.getElementById(previewId);
+    box.innerHTML = body;
+    box.classList.remove('loading');
+    return body;
+  }
+
+  async function generate() {
+    const productUrl = document.getElementById('product-url').value.trim();
+    const ticket = document.getElementById('ticket').value.trim();
+    const answer = document.getElementById('answer').value.trim();
+    const type = document.getElementById('art-type').value;
+    const btn = document.getElementById('btn-gen');
+
+    if (!ticket || !answer) { alert('Please fill in the customer question and the correct answer.'); return; }
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Working...';
+    htmlNL = ''; htmlEN = ''; htmlFIL = '';
+    currentLang = 'en';
+    document.getElementById('lang-en').classList.add('active');
+    document.getElementById('lang-fil').classList.remove('active');
+    document.getElementById('btn-translate').style.display = 'none';
+    document.getElementById('results-section').style.display = 'block';
+    ['preview-nl','preview-en'].forEach(id => {
+      document.getElementById(id).innerHTML = 'Generating...';
+      document.getElementById(id).classList.add('loading');
+    });
+    document.getElementById('status-nl').textContent = '';
+    document.getElementById('status-en').textContent = '';
+
+    let sourcesHtml = '<span class="source-tag pending" id="src-help">help.skrub.nl</span>';
+    if (productUrl) sourcesHtml = '<span class="source-tag pending" id="src-product">Product page</span>' + sourcesHtml;
+    document.getElementById('sources-row').innerHTML = sourcesHtml;
+
+    let productText = '', helpText = '';
+
+    if (productUrl) {
+      const html = await fetchPage(productUrl);
+      if (html) { productText = stripHtml(html, 2500); setSource('src-product', ''); }
+      else setSource('src-product', 'failed');
+    }
+
+    const helpHtml = await fetchPage('https://help.skrub.nl');
+    if (helpHtml) { helpText = stripHtml(helpHtml, 1500); setSource('src-help', ''); }
+    else setSource('src-help', 'failed');
+
+    const prompt = `Write a Help Center article (type: ${type}) for Skrub in both Dutch and English.
+
+Brand context:
+${getBrand()}
+
+${getFormat()}
+
+${productText ? `== Live product page ==\n${productText}\n` : ''}
+${helpText ? `== Existing Help Center ==\n${helpText}\n` : ''}
+
+== Customer ticket ==
+${ticket}
+
+== Correct answer ==
+${answer}
+
+Return BOTH versions separated by exactly: ===ENGLISH===
+
+Dutch version first:
+TITEL: [Dutch title]
+[HTML body in Dutch]
+
+===ENGLISH===
+TITLE: [English title]
+[HTML body in English]`;
+
+    const system = `You are a Help Center writer for Skrub. Always output valid HTML (p, ol, ul, li, strong tags). Never use markdown or asterisks. Write informally, no "u/uw". Match the concise style of help.skrub.nl. Never refer to a product as "De Skrub" or "the Skrub" — always use the exact product name.`;
+
+    try {
+      const raw = await callClaude(prompt, system);
+      const parts = raw.split('===ENGLISH===');
+      htmlNL = parseAndRender(parts[0].trim(), 'title-nl', 'preview-nl');
+      htmlEN = parts[1] ? parseAndRender(parts[1].trim(), 'title-en', 'preview-en') : '';
+      document.getElementById('btn-translate').style.display = 'block';
+    } catch (e) {
+      ['preview-nl','preview-en'].forEach(id => {
+        document.getElementById(id).innerHTML = 'Error: ' + e.message;
+        document.getElementById(id).classList.remove('loading');
+      });
+    }
+
+    btn.disabled = false;
+    btn.innerHTML = 'Generate article';
+  }
+
+  async function translate() {
+    if (htmlFIL) { showFil(); return; }
+    const btn = document.getElementById('btn-translate');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Translating...';
+    document.getElementById('preview-en').innerHTML = 'Translating...';
+    document.getElementById('preview-en').classList.add('loading');
+    try {
+      const raw = await callClaude(
+        `Translate this Help Center article to Filipino (Tagalog). Keep HTML structure. Keep product names in English. Same informal helpful tone.\n\nTITLE: ${document.getElementById('title-en').value}\n${htmlEN}`,
+        'You are a translator for Skrub. Translate Help Center articles to Filipino (Tagalog). Keep all HTML tags intact. Keep product names in English.'
+      );
+      const titleMatch = raw.match(/^(?:TITLE|PAMAGAT):\s*(.+)/im);
+      if (titleMatch) document.getElementById('title-en').value = titleMatch[1].trim();
+      htmlFIL = raw.replace(/^(?:TITLE|PAMAGAT):\s*.+\n?/im, '').trim();
+      showFil();
+    } catch (e) {
+      document.getElementById('preview-en').innerHTML = 'Translation failed: ' + e.message;
+      document.getElementById('preview-en').classList.remove('loading');
+    }
+    btn.disabled = false;
+    btn.innerHTML = 'Translate to Filipino';
+  }
+
+  function showFil() {
+    document.getElementById('preview-en').innerHTML = htmlFIL;
+    document.getElementById('preview-en').classList.remove('loading');
+    document.getElementById('lang-fil').classList.add('active');
+    document.getElementById('lang-en').classList.remove('active');
+    currentLang = 'fil';
+  }
+
+  function switchLang(lang) {
+    if (lang === currentLang) return;
+    if (lang === 'fil' && !htmlFIL) { translate(); return; }
+    currentLang = lang;
+    document.getElementById('lang-en').classList.toggle('active', lang === 'en');
+    document.getElementById('lang-fil').classList.toggle('active', lang === 'fil');
+    document.getElementById('preview-en').innerHTML = lang === 'en' ? htmlEN : htmlFIL;
+  }
+
+  function copyCol(col) {
+    const box = document.getElementById(col === 'nl' ? 'preview-nl' : 'preview-en');
+    const title = document.getElementById(col === 'nl' ? 'title-nl' : 'title-en').value.trim();
+    const html = `<h2>${title}</h2>${box.innerHTML}`;
+    const plain = title + '\n\n' + (box.innerText || box.textContent);
+    try {
+      navigator.clipboard.write([
+        new ClipboardItem({ 'text/html': new Blob([html], {type:'text/html'}), 'text/plain': new Blob([plain], {type:'text/plain'}) })
+      ]).then(() => showCopied(col));
+    } catch {
+      navigator.clipboard.writeText(plain).then(() => showCopied(col));
+    }
+  }
+
+  function showCopied(col) {
+    const id = col === 'nl' ? 'status-nl' : 'status-en';
+    document.getElementById(id).textContent = '✓ Copied with formatting!';
+    document.getElementById(id).className = 'status ok';
+    setTimeout(() => { document.getElementById(id).textContent = ''; document.getElementById(id).className = 'status'; }, 2500);
+  }
+
+  function toggleSteps() {
+    const el = document.getElementById('publish-steps');
+    const btn = document.getElementById('btn-steps');
+    const open = el.style.display === 'none';
+    el.style.display = open ? 'block' : 'none';
+    btn.textContent = open ? 'How to publish in Gorgias ↑' : 'How to publish in Gorgias ↓';
+  }
+
+  init();
+</script>
+</body>
+</html>
